@@ -22,6 +22,7 @@ export default function PatternHighlighter() {
   const timerFinishedRef = useRef(false);
 
   const imageRef = useRef<HTMLImageElement>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // 統一處理圖片檔案的邏輯 (重置所有狀態)
   const handleImageFile = (file: File) => {
@@ -70,7 +71,7 @@ export default function PatternHighlighter() {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        setPugCount((prev) => prev - 1);
+        setPugCount((prev) => Math.max(0, prev - 1));
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         setPugCount((prev) => prev + 1);
@@ -80,7 +81,7 @@ export default function PatternHighlighter() {
     return () => window.removeEventListener('keydown', handlePugKey);
   }, []);
 
-  // 4. 番茄鐘：Space 鍵切換 (input/button 聚焦時跳過)
+  // 5. 番茄鐘：Space 鍵切換 (input/button 聚焦時跳過)
   useEffect(() => {
     const handleSpace = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -113,42 +114,28 @@ export default function PatternHighlighter() {
     return () => clearInterval(id);
   }, [pomodoroRunning]);
 
-  // 7. 番茄鐘：偵測自然結束，觸發動畫與音效
+  // 7. 番茄鐘：偵測自然結束，觸發動畫
   useEffect(() => {
     if (!pomodoroRunning && timerFinishedRef.current) {
       timerFinishedRef.current = false;
 
-      // 鈴聲：C-E-G 三音和弦重複三次，漸弱淡出，持續約 10 秒
-      try {
-        const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-        const notes = [523.25, 659.25, 783.99];
-        const chimes = [
-          { startDelay: 0,   volume: 0.22 },
-          { startDelay: 3.5, volume: 0.13 },
-          { startDelay: 7.0, volume: 0.07 },
-        ];
-        chimes.forEach(({ startDelay, volume }) => {
-          notes.forEach((freq, i) => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.type = 'sine';
-            osc.frequency.value = freq;
-            const t = ctx.currentTime + startDelay + i * 0.32;
-            gain.gain.setValueAtTime(0, t);
-            gain.gain.linearRampToValueAtTime(volume, t + 0.04);
-            gain.gain.exponentialRampToValueAtTime(0.001, t + 3.0);
-            osc.start(t);
-            osc.stop(t + 3.0);
-          });
-        });
-      } catch (_) { /* AudioContext 不可用時靜默略過 */ }
-
       // 全螢幕完成動畫
       setPomodoroFinished(true);
-      const t = setTimeout(() => setPomodoroFinished(false), 10000);
-      return () => clearTimeout(t);
+
+      // 播放音效，與動畫同步（10 秒後停止）
+      const audio = new Audio('/2026-02-28%2010-11-49.mp3');
+      audioRef.current = audio;
+      audio.play().catch(() => {});
+
+      const t = setTimeout(() => {
+        setPomodoroFinished(false);
+        audio.pause();
+        audio.currentTime = 0;
+      }, 10000);
+      return () => {
+        clearTimeout(t);
+        audio.pause();
+      };
     }
   }, [pomodoroRunning]);
 
@@ -327,33 +314,8 @@ export default function PatternHighlighter() {
       <div className="fixed bottom-6 left-6 z-50 select-none">
         <div className="flex flex-col items-center gap-2 px-6 py-5 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
 
-          {/* Pug face SVG */}
-          <svg width="54" height="50" viewBox="0 0 44 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* head */}
-            <ellipse cx="22" cy="22" rx="18" ry="16" fill="#c8996a" />
-            {/* forehead wrinkles */}
-            <path d="M15 13 Q17 10 22 12 Q27 10 29 13" stroke="#a0723f" strokeWidth="1.2" strokeLinecap="round" fill="none"/>
-            <path d="M17 10 Q19 7 22 9 Q25 7 27 10" stroke="#a0723f" strokeWidth="1" strokeLinecap="round" fill="none"/>
-            {/* ears */}
-            <ellipse cx="6" cy="14" rx="5.5" ry="7" fill="#3d2209" transform="rotate(-10 6 14)"/>
-            <ellipse cx="38" cy="14" rx="5.5" ry="7" fill="#3d2209" transform="rotate(10 38 14)"/>
-            {/* muzzle */}
-            <ellipse cx="22" cy="28" rx="10" ry="7.5" fill="#b07d4a"/>
-            {/* muzzle wrinkle lines */}
-            <path d="M13 26 Q15 29 17 27" stroke="#8a5c2e" strokeWidth="1" strokeLinecap="round" fill="none"/>
-            <path d="M31 26 Q29 29 27 27" stroke="#8a5c2e" strokeWidth="1" strokeLinecap="round" fill="none"/>
-            {/* nose */}
-            <ellipse cx="22" cy="24.5" rx="5" ry="3.5" fill="#1a0f05"/>
-            <ellipse cx="20.5" cy="23.5" rx="1.5" ry="1" fill="#3d2b1f" opacity="0.5"/>
-            {/* nostrils */}
-            <ellipse cx="19.5" cy="25.5" rx="1.4" ry="1" fill="#0d0704"/>
-            <ellipse cx="24.5" cy="25.5" rx="1.4" ry="1" fill="#0d0704"/>
-            {/* eyes */}
-            <ellipse cx="15" cy="19" rx="4" ry="4.5" fill="#1a0f05"/>
-            <ellipse cx="29" cy="19" rx="4" ry="4.5" fill="#1a0f05"/>
-            <ellipse cx="13.8" cy="17.5" rx="1.2" ry="1.5" fill="white" opacity="0.7"/>
-            <ellipse cx="27.8" cy="17.5" rx="1.2" ry="1.5" fill="white" opacity="0.7"/>
-          </svg>
+          {/* Pug favicon */}
+          <img src="/LovelyPug.JPG" alt="pug" width={54} height={54} className="object-contain rounded-full" />
 
           {/* counter */}
           <div className="text-5xl font-black leading-none tracking-tight text-gray-800">
@@ -473,6 +435,7 @@ export default function PatternHighlighter() {
           </div>
         </div>
       )}
+
 
     </div>
   );
