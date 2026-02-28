@@ -5,7 +5,7 @@ import ReactCrop, { type Crop, type PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { idbSet, idbGet } from '@/lib/storage';
 
-function useDraggable(storageKey: string, getDefault: () => { x: number; y: number }) {
+function useDraggable(storageKey: string, getDefault: (el: HTMLDivElement) => { x: number; y: number }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
@@ -14,7 +14,7 @@ function useDraggable(storageKey: string, getDefault: () => { x: number; y: numb
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
     if (saved) { try { setPos(JSON.parse(saved)); return; } catch {} }
-    setPos(getDefault());
+    if (containerRef.current) setPos(getDefault(containerRef.current));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -74,8 +74,8 @@ export default function PatternHighlighter() {
   const imageRef = useRef<HTMLImageElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const pugDrag = useDraggable('ph-pug-pos', () => ({ x: 24, y: window.innerHeight - 200 }));
-  const pomodoroDrag = useDraggable('ph-pomodoro-pos', () => ({ x: window.innerWidth - 184, y: window.innerHeight - 300 }));
+  const pugDrag = useDraggable('ph-pug-pos', (el) => ({ x: 24, y: window.innerHeight - el.offsetHeight - 24 }));
+  const pomodoroDrag = useDraggable('ph-pomodoro-pos', (el) => ({ x: window.innerWidth - el.offsetWidth - 24, y: window.innerHeight - el.offsetHeight - 24 }));
 
   // 統一處理圖片檔案的邏輯 (重置所有狀態)
   const handleImageFile = (file: File) => {
