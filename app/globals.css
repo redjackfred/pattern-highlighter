@@ -40,9 +40,9 @@ body {
 }
 
 .animate-timer-finish {
-  animation: timer-finish 10s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: timer-finish 15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .animate-timer-pop {
-  animation: timer-pop 10s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  animation: timer-pop 15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }

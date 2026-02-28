@@ -1,18 +1,31 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { idbSet, idbGet } from '@/lib/storage';
 
 export default function PdfViewer() {
   const [pdfUrl, setPdfUrl] = useState<string>('');
 
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(URL.createObjectURL(file));
+    const buffer = await file.arrayBuffer();
+    idbSet('pdf-file', buffer);
   };
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) handleFile(e.target.files[0]);
   };
+
+  // Restore PDF from IndexedDB on mount
+  useEffect(() => {
+    idbGet<ArrayBuffer>('pdf-file').then(buffer => {
+      if (buffer) {
+        const blob = new Blob([buffer], { type: 'application/pdf' });
+        setPdfUrl(URL.createObjectURL(blob));
+      }
+    });
+  }, []);
 
   useEffect(() => {
     return () => { if (pdfUrl) URL.revokeObjectURL(pdfUrl); };
@@ -47,9 +60,9 @@ export default function PdfViewer() {
         <div className="w-full max-w-4xl flex-1 min-h-0 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 overflow-hidden flex flex-col gap-6">
 
           {/* 頂部控制列 */}
-          <div className="flex flex-wrap items-center justify-between bg-gray-50 p-4 rounded-2xl shrink-0">
+          <div className="flex flex-wrap items-center justify-between bg-gray-50 py-1 px-4 rounded-2xl shrink-0">
             <span className="text-sm font-medium text-gray-500">Pattern PDF</span>
-            <label className="cursor-pointer px-4 py-2 text-sm font-medium text-gray-400 hover:text-black hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2">
+            <label className="cursor-pointer px-4 py-1 text-sm font-medium text-gray-400 hover:text-black hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
               換一個 PDF
               <input type="file" accept="application/pdf" onChange={onSelectFile} className="hidden" />
@@ -59,7 +72,7 @@ export default function PdfViewer() {
           {/* PDF 檢視區 */}
           <div className="flex-1 min-h-0 bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden">
             <iframe
-              src={pdfUrl}
+              src={`${pdfUrl}#toolbar=0&navpanes=0`}
               className="w-full h-full border-0"
               title="Pattern PDF"
             />

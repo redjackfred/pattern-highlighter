@@ -3,15 +3,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactCrop, { type Crop, type PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { idbSet, idbGet } from '@/lib/storage';
 
-function useDraggable(getInitial: () => { x: number; y: number }) {
+function useDraggable(storageKey: string, getDefault: () => { x: number; y: number }) {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) { try { setPos(JSON.parse(saved)); return; } catch {} }
+    setPos(getDefault());
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { setPos(getInitial()); }, []);
+  }, []);
+
+  useEffect(() => {
+    if (!pos) return;
+    localStorage.setItem(storageKey, JSON.stringify(pos));
+  }, [pos, storageKey]);
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -64,8 +74,8 @@ export default function PatternHighlighter() {
   const imageRef = useRef<HTMLImageElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const pugDrag = useDraggable(() => ({ x: 24, y: window.innerHeight - 200 }));
-  const pomodoroDrag = useDraggable(() => ({ x: window.innerWidth - 184, y: window.innerHeight - 300 }));
+  const pugDrag = useDraggable('ph-pug-pos', () => ({ x: 24, y: window.innerHeight - 200 }));
+  const pomodoroDrag = useDraggable('ph-pomodoro-pos', () => ({ x: window.innerWidth - 184, y: window.innerHeight - 300 }));
 
   // 統一處理圖片檔案的邏輯 (重置所有狀態)
   const handleImageFile = (file: File) => {
@@ -165,18 +175,35 @@ export default function PatternHighlighter() {
       // 全螢幕完成動畫
       setPomodoroFinished(true);
 
-      // 播放音效，與動畫同步（10 秒後停止）
+      // 播放音效，與動畫同步（15 秒），淡入淡出
+      const TOTAL = 15000;
+      const FADE = 1500;
       const audio = new Audio('/2026-02-28%2010-11-49.mp3');
       audioRef.current = audio;
+      audio.volume = 0;
       audio.play().catch(() => {});
+
+      const start = Date.now();
+      const fadeInterval = setInterval(() => {
+        const elapsed = Date.now() - start;
+        if (elapsed < FADE) {
+          audio.volume = elapsed / FADE;
+        } else if (elapsed > TOTAL - FADE) {
+          audio.volume = Math.max(0, (TOTAL - elapsed) / FADE);
+        } else {
+          audio.volume = 1;
+        }
+      }, 50);
 
       const t = setTimeout(() => {
         setPomodoroFinished(false);
+        clearInterval(fadeInterval);
         audio.pause();
         audio.currentTime = 0;
-      }, 10000);
+      }, TOTAL);
       return () => {
         clearTimeout(t);
+        clearInterval(fadeInterval);
         audio.pause();
       };
     }
@@ -205,6 +232,45 @@ export default function PatternHighlighter() {
     window.addEventListener('keydown', handleKeyDown, { passive: false });
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isHighlightMode, totalRows]);
+
+  // ── Persistence ──────────────────────────────────────────────────────────
+
+  // Load all persisted state on mount (defined before save effects so it runs first)
+  useEffect(() => {
+    const rows   = localStorage.getItem('ph-totalRows');
+    const row    = localStorage.getItem('ph-currentRow');
+    const cropStr = localStorage.getItem('ph-completedCrop');
+    const mode   = localStorage.getItem('ph-isHighlightMode');
+
+    if (rows) setTotalRows(Number(rows));
+    if (row)  setCurrentRow(Number(row));
+    if (cropStr) {
+      try {
+        const c = JSON.parse(cropStr) as PercentCrop;
+        setCompletedCrop(c);
+        setCrop(c);
+      } catch {}
+    }
+
+    idbGet<string>('pattern-image').then(dataUrl => {
+      if (dataUrl) {
+        setImgSrc(dataUrl);
+        if (mode === 'true' && cropStr) setIsHighlightMode(true);
+      }
+    });
+  }, []);
+
+  // Save state whenever it changes
+  useEffect(() => { if (imgSrc) idbSet('pattern-image', imgSrc); }, [imgSrc]);
+  useEffect(() => { if (totalRows !== '') localStorage.setItem('ph-totalRows', String(totalRows)); }, [totalRows]);
+  useEffect(() => { localStorage.setItem('ph-currentRow', String(currentRow)); }, [currentRow]);
+  useEffect(() => {
+    if (completedCrop) localStorage.setItem('ph-completedCrop', JSON.stringify(completedCrop));
+    else localStorage.removeItem('ph-completedCrop');
+  }, [completedCrop]);
+  useEffect(() => { localStorage.setItem('ph-isHighlightMode', String(isHighlightMode)); }, [isHighlightMode]);
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const getHighlightStyle = () => {
     if (!completedCrop) return {};
