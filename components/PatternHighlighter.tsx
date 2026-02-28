@@ -13,9 +13,9 @@ function useDraggable(storageKey: string, getDefault: (el: HTMLDivElement) => { 
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
-    if (saved) { try { setPos(JSON.parse(saved)); return; } catch {} }
+    if (saved) { try { setPos(JSON.parse(saved)); return; } catch { } }
     if (containerRef.current) setPos(getDefault(containerRef.current));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -181,7 +181,7 @@ export default function PatternHighlighter() {
       const audio = new Audio('/2026-02-28%2010-11-49.mp3');
       audioRef.current = audio;
       audio.volume = 0;
-      audio.play().catch(() => {});
+      audio.play().catch(() => { });
 
       const start = Date.now();
       const fadeInterval = setInterval(() => {
@@ -237,19 +237,19 @@ export default function PatternHighlighter() {
 
   // Load all persisted state on mount (defined before save effects so it runs first)
   useEffect(() => {
-    const rows   = localStorage.getItem('ph-totalRows');
-    const row    = localStorage.getItem('ph-currentRow');
+    const rows = localStorage.getItem('ph-totalRows');
+    const row = localStorage.getItem('ph-currentRow');
     const cropStr = localStorage.getItem('ph-completedCrop');
-    const mode   = localStorage.getItem('ph-isHighlightMode');
+    const mode = localStorage.getItem('ph-isHighlightMode');
 
     if (rows) setTotalRows(Number(rows));
-    if (row)  setCurrentRow(Number(row));
+    if (row) setCurrentRow(Number(row));
     if (cropStr) {
       try {
         const c = JSON.parse(cropStr) as PercentCrop;
         setCompletedCrop(c);
         setCrop(c);
-      } catch {}
+      } catch { }
     }
 
     idbGet<string>('pattern-image').then(dataUrl => {
@@ -288,14 +288,14 @@ export default function PatternHighlighter() {
   };
 
   return (
-    <div className="h-full overflow-y-auto bg-gray-50 flex flex-col items-center py-8 px-4 font-sans text-gray-800">
+    <div className="h-full overflow-hidden bg-gray-50 flex flex-col items-center py-4 px-4 font-sans text-gray-800">
 
-      <div className="text-center mb-10">
+      <div className="text-center mb-4 shrink-0">
         <h1 className="text-3xl font-bold tracking-tight mb-2">Pattern Highlighter</h1>
         <p className="text-gray-500 text-sm">專注於你的每一段編織</p>
       </div>
 
-      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-8 overflow-hidden">
+      <div className="w-full max-w-6xl flex-1 min-h-0 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 overflow-hidden flex flex-col">
 
         {/* 狀態 1：還沒上傳圖片 */}
         {!imgSrc && (
@@ -313,10 +313,10 @@ export default function PatternHighlighter() {
 
         {/* 狀態 2 & 3：已上傳圖片 */}
         {imgSrc && (
-          <div className="flex flex-col gap-6">
+          <div className="flex-1 min-h-0 flex flex-col gap-4">
 
             {/* 頂部極簡控制列 */}
-            <div className="flex flex-wrap items-center justify-between bg-gray-50 p-4 rounded-2xl">
+            <div className="flex flex-wrap items-center justify-between bg-gray-50 py-2 px-4 rounded-2xl shrink-0">
 
               {/* 左側操作區 */}
               <div className="flex items-center gap-6">
@@ -377,7 +377,7 @@ export default function PatternHighlighter() {
             </div>
 
             {/* 織圖顯示區塊 */}
-            <div className="w-full flex justify-center bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden p-4">
+            <div className="w-full flex-1 min-h-0 flex justify-center items-center bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden p-3">
 
               {!isHighlightMode ? (
                 // 【關鍵 1】給 ReactCrop 加上 !inline-flex 確保它的外框行為跟普通的 div 一致
@@ -392,7 +392,7 @@ export default function PatternHighlighter() {
                     src={imgSrc}
                     alt="Pattern"
                     // 【關鍵 2】用 inline style 強制綁定高度，加上 block 消滅所有預設縫隙
-                    style={{ maxHeight: '70vh', width: 'auto' }}
+                    style={{ maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
                     className="block max-w-full object-contain"
                   />
                 </ReactCrop>
@@ -402,7 +402,7 @@ export default function PatternHighlighter() {
                   <img
                     src={imgSrc}
                     alt="Pattern"
-                    style={{ maxHeight: '70vh', width: 'auto' }}
+                    style={{ maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
                     className="block max-w-full object-contain"
                   />
 
@@ -458,9 +458,8 @@ export default function PatternHighlighter() {
 
           {/* time display — click to toggle */}
           <div
-            className={`text-4xl font-black leading-none tracking-tight font-mono transition-colors duration-300 cursor-pointer ${
-              pomodoroRunning ? 'text-red-500' : 'text-gray-800'
-            }`}
+            className={`text-4xl font-black leading-none tracking-tight font-mono transition-colors duration-300 cursor-pointer ${pomodoroRunning ? 'text-red-500' : 'text-gray-800'
+              }`}
             onClick={() => setPomodoroRunning((r) => !r)}
           >
             {formatTime(pomodoroSecs)}
