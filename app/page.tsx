@@ -1,10 +1,5 @@
-
-import PatternHighlighter from "@/components/PatternHighlighter";
+import SplitLayout from "@/components/SplitLayout";
 
 export default function Home() {
-  return (
-    <div>
-      <PatternHighlighter />
-    </div>
-  );
+  return <SplitLayout />;
 }
