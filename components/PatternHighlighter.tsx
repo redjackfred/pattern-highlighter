@@ -10,6 +10,7 @@ function useDraggable(storageKey: string, getDefault: (el: HTMLDivElement) => { 
   const dragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem(storageKey);
@@ -32,10 +33,19 @@ function useDraggable(storageKey: string, getDefault: (el: HTMLDivElement) => { 
         y: Math.max(0, Math.min(e.clientY - offset.current.y, window.innerHeight - (el?.offsetHeight ?? 0))),
       });
     };
-    const onUp = () => { dragging.current = false; };
+    const onUp = () => {
+      dragging.current = false;
+      overlayRef.current?.remove();
+      overlayRef.current = null;
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      overlayRef.current?.remove();
+      overlayRef.current = null;
+    };
   }, []);
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -47,6 +57,11 @@ function useDraggable(storageKey: string, getDefault: (el: HTMLDivElement) => { 
     if (!pos) return;
     offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
     dragging.current = true;
+    // Cover the page (incl. iframes) so mousemove events aren't swallowed
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:99998;cursor:grabbing;';
+    document.body.appendChild(overlay);
+    overlayRef.current = overlay;
     e.preventDefault();
   };
 
