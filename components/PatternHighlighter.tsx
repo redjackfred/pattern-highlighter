@@ -4,6 +4,46 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactCrop, { type Crop, type PercentCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
+function useDraggable(getInitial: () => { x: number; y: number }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const dragging = useRef(false);
+  const offset = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { setPos(getInitial()); }, []);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const el = containerRef.current;
+      setPos({
+        x: Math.max(0, Math.min(e.clientX - offset.current.x, window.innerWidth - (el?.offsetWidth ?? 0))),
+        y: Math.max(0, Math.min(e.clientY - offset.current.y, window.innerHeight - (el?.offsetHeight ?? 0))),
+      });
+    };
+    const onUp = () => { dragging.current = false; };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, []);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    let node = e.target as HTMLElement | null;
+    while (node && node !== e.currentTarget) {
+      if (node.tagName === 'BUTTON' || node.tagName === 'INPUT' || node.tagName === 'LABEL') return;
+      node = node.parentElement;
+    }
+    if (!pos) return;
+    offset.current = { x: e.clientX - pos.x, y: e.clientY - pos.y };
+    dragging.current = true;
+    e.preventDefault();
+  };
+
+  const style: React.CSSProperties = pos ? { left: pos.x, top: pos.y } : { visibility: 'hidden' };
+  return { containerRef, onMouseDown, style };
+}
+
 export default function PatternHighlighter() {
   const [imgSrc, setImgSrc] = useState<string>('');
   const [totalRows, setTotalRows] = useState<number | ''>(15);
@@ -23,6 +63,9 @@ export default function PatternHighlighter() {
 
   const imageRef = useRef<HTMLImageElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const pugDrag = useDraggable(() => ({ x: 24, y: window.innerHeight - 200 }));
+  const pomodoroDrag = useDraggable(() => ({ x: window.innerWidth - 184, y: window.innerHeight - 300 }));
 
   // 統一處理圖片檔案的邏輯 (重置所有狀態)
   const handleImageFile = (file: File) => {
@@ -311,7 +354,7 @@ export default function PatternHighlighter() {
       </div>
 
       {/* 🐾 Pug Counter */}
-      <div className="fixed bottom-6 left-6 z-50 select-none">
+      <div ref={pugDrag.containerRef} className="fixed z-50 select-none cursor-grab [&_button]:cursor-pointer" style={pugDrag.style} onMouseDown={pugDrag.onMouseDown}>
         <div className="flex flex-col items-center gap-2 px-6 py-5 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
 
           {/* Pug favicon */}
@@ -330,7 +373,7 @@ export default function PatternHighlighter() {
       </div>
 
       {/* 🍅 Tomato Clock */}
-      <div className="fixed bottom-6 right-6 z-50 select-none">
+      <div ref={pomodoroDrag.containerRef} className="fixed z-50 select-none cursor-grab [&_button]:cursor-pointer" style={pomodoroDrag.style} onMouseDown={pomodoroDrag.onMouseDown}>
         <div className="flex flex-col items-center gap-2 px-6 py-5 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
 
           {/* Tomato SVG */}
