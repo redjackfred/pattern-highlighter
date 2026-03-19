@@ -83,6 +83,7 @@ export default function PatternHighlighter() {
   const [pomodoroSecs, setPomodoroSecs] = useState(25 * 60);
   const [pomodoroRunning, setPomodoroRunning] = useState(false);
   const [pomodoroFinished, setPomodoroFinished] = useState(false);
+  const [pomodoroCollapsed, setPomodoroCollapsed] = useState(false);
   const pomodoroTotalRef = useRef(25 * 60);
   const timerFinishedRef = useRef(false);
 
@@ -516,93 +517,129 @@ export default function PatternHighlighter() {
 
       {/* 🍅 Tomato Clock */}
       <div ref={pomodoroDrag.containerRef} className="fixed z-50 select-none cursor-grab [&_button]:cursor-pointer" style={pomodoroDrag.style} onMouseDown={pomodoroDrag.onMouseDown}>
-        <div className="flex flex-col items-center gap-2 px-6 py-5 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
-
-          {/* Tomato SVG */}
-          <svg width="54" height="54" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
-            {/* body */}
-            <circle cx="22" cy="27" r="15" fill="#ef4444" />
-            {/* shine */}
-            <ellipse cx="16" cy="21" rx="4.5" ry="3" fill="white" opacity="0.22" transform="rotate(-20 16 21)" />
-            {/* stem */}
-            <path d="M22 8 C21.5 10 22.5 13 22 16" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
-            {/* left leaf */}
-            <path d="M22 13 C19 9 13 10 13 14 C16 13 20 14 22 13Z" fill="#16a34a" />
-            {/* right leaf */}
-            <path d="M22 13 C25 9 31 10 31 14 C28 13 24 14 22 13Z" fill="#16a34a" />
-          </svg>
-
-          {/* time display — click to toggle */}
-          <div
-            className={`text-4xl font-black leading-none tracking-tight font-mono transition-colors duration-300 cursor-pointer ${pomodoroRunning ? 'text-red-500' : 'text-gray-800'
-              }`}
-            onClick={() => setPomodoroRunning((r) => !r)}
-          >
-            {formatTime(pomodoroSecs)}
-          </div>
-
-          {/* controls row */}
-          <div className="flex items-center gap-2">
-            {/* − minute */}
+        {pomodoroCollapsed ? (
+          /* ── Collapsed: tomato + time only ── */
+          <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
+            <svg width="28" height="28" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg" onClick={() => setPomodoroRunning((r) => !r)} className="cursor-pointer shrink-0">
+              <circle cx="22" cy="27" r="15" fill="#ef4444" />
+              <ellipse cx="16" cy="21" rx="4.5" ry="3" fill="white" opacity="0.22" transform="rotate(-20 16 21)" />
+              <path d="M22 8 C21.5 10 22.5 13 22 16" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M22 13 C19 9 13 10 13 14 C16 13 20 14 22 13Z" fill="#16a34a" />
+              <path d="M22 13 C25 9 31 10 31 14 C28 13 24 14 22 13Z" fill="#16a34a" />
+            </svg>
+            <span
+              className={`text-lg font-black leading-none tracking-tight font-mono transition-colors duration-300 cursor-pointer ${pomodoroRunning ? 'text-red-500' : 'text-gray-800'}`}
+              onClick={() => setPomodoroRunning((r) => !r)}
+            >
+              {formatTime(pomodoroSecs)}
+            </span>
+            {/* expand button */}
             <button
               tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                const next = Math.max(60, pomodoroTotal - 60);
-                setPomodoroTotal(next);
-                setPomodoroSecs(next);
-              }}
-              disabled={pomodoroRunning}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-colors text-base leading-none"
+              onClick={() => setPomodoroCollapsed(false)}
+              className="w-5 h-5 flex items-center justify-center rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors ml-0.5"
+              aria-label="Expand timer"
             >
-              −
-            </button>
-
-            <span className="text-[10px] font-mono text-gray-300">min</span>
-
-            {/* + minute */}
-            <button
-              tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                const next = Math.min(99 * 60, pomodoroTotal + 60);
-                setPomodoroTotal(next);
-                setPomodoroSecs(next);
-              }}
-              disabled={pomodoroRunning}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-colors text-base leading-none"
-            >
-              +
-            </button>
-
-            <div className="w-px h-3 bg-gray-200 mx-1" />
-
-            {/* ↺ reset */}
-            <button
-              tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
-              onClick={() => {
-                setPomodoroRunning(false);
-                setPomodoroSecs(pomodoroTotal);
-              }}
-              className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-              aria-label="Reset timer"
-            >
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M10 6A4 4 0 1 1 7.5 2.3" />
-                <polyline points="7.5,1 7.5,3 9.5,3" />
+              <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M1 9 L9 1 M5 1 H9 V5" />
               </svg>
             </button>
           </div>
+        ) : (
+          /* ── Expanded: full widget ── */
+          <div className="flex flex-col items-center gap-2 px-6 py-5 rounded-2xl bg-white/70 border border-gray-100/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-sm">
 
-          {/* start / pause button */}
-          <button
-            tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
-            onClick={() => setPomodoroRunning((r) => !r)}
-            className="w-full py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium"
-          >
-            <span className="text-xs">{pomodoroRunning ? '▐▌' : '▶'}</span>
-            <span>{pomodoroRunning ? 'Pause' : 'Start'}</span>
-          </button>
+            {/* collapse button (top-right) */}
+            <div className="self-end -mt-1 -mr-2">
+              <button
+                tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setPomodoroCollapsed(true)}
+                className="w-5 h-5 flex items-center justify-center rounded-md text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                aria-label="Collapse timer"
+              >
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 1 L1 9 M5 9 H1 V5" />
+                </svg>
+              </button>
+            </div>
 
-        </div>
+            {/* Tomato SVG */}
+            <svg width="54" height="54" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="22" cy="27" r="15" fill="#ef4444" />
+              <ellipse cx="16" cy="21" rx="4.5" ry="3" fill="white" opacity="0.22" transform="rotate(-20 16 21)" />
+              <path d="M22 8 C21.5 10 22.5 13 22 16" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M22 13 C19 9 13 10 13 14 C16 13 20 14 22 13Z" fill="#16a34a" />
+              <path d="M22 13 C25 9 31 10 31 14 C28 13 24 14 22 13Z" fill="#16a34a" />
+            </svg>
+
+            {/* time display — click to toggle */}
+            <div
+              className={`text-4xl font-black leading-none tracking-tight font-mono transition-colors duration-300 cursor-pointer ${pomodoroRunning ? 'text-red-500' : 'text-gray-800'}`}
+              onClick={() => setPomodoroRunning((r) => !r)}
+            >
+              {formatTime(pomodoroSecs)}
+            </div>
+
+            {/* controls row */}
+            <div className="flex items-center gap-2">
+              <button
+                tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const next = Math.max(60, pomodoroTotal - 60);
+                  setPomodoroTotal(next);
+                  setPomodoroSecs(next);
+                }}
+                disabled={pomodoroRunning}
+                className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-colors text-base leading-none"
+              >
+                −
+              </button>
+
+              <span className="text-[10px] font-mono text-gray-300">min</span>
+
+              <button
+                tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  const next = Math.min(99 * 60, pomodoroTotal + 60);
+                  setPomodoroTotal(next);
+                  setPomodoroSecs(next);
+                }}
+                disabled={pomodoroRunning}
+                className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-25 disabled:cursor-not-allowed transition-colors text-base leading-none"
+              >
+                +
+              </button>
+
+              <div className="w-px h-3 bg-gray-200 mx-1" />
+
+              <button
+                tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setPomodoroRunning(false);
+                  setPomodoroSecs(pomodoroTotal);
+                }}
+                className="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+                aria-label="Reset timer"
+              >
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 6A4 4 0 1 1 7.5 2.3" />
+                  <polyline points="7.5,1 7.5,3 9.5,3" />
+                </svg>
+              </button>
+            </div>
+
+            {/* start / pause button */}
+            <button
+              tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
+              onClick={() => setPomodoroRunning((r) => !r)}
+              className="w-full py-2 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-800 transition-colors flex items-center justify-center gap-1.5 text-sm font-medium"
+            >
+              <span className="text-xs">{pomodoroRunning ? '▐▌' : '▶'}</span>
+              <span>{pomodoroRunning ? 'Pause' : 'Start'}</span>
+            </button>
+
+          </div>
+        )}
       </div>
 
       {/* 🍅 Timer-up full-screen overlay */}
