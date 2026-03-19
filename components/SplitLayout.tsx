@@ -12,7 +12,7 @@ export default function SplitLayout() {
 
       {/* Left: PDF viewer */}
       <div
-        className={`h-full overflow-hidden border-r border-gray-200 transition-[width] duration-300 ease-in-out ${open ? 'w-3/5' : 'w-full'
+        className={`h-full overflow-hidden border-r border-gray-200 transition-[width] duration-300 ease-in-out ${open ? 'w-1/2' : 'w-0'
           }`}
       >
         <PdfViewer />
@@ -20,7 +20,7 @@ export default function SplitLayout() {
 
       {/* Right: Pattern Highlighter */}
       <div
-        className={`h-full overflow-hidden transition-[width] duration-300 ease-in-out ${open ? 'w-2/5' : 'w-0'
+        className={`h-full overflow-hidden transition-[width] duration-300 ease-in-out ${open ? 'w-1/2' : 'w-full'
           }`}
       >
         <PatternHighlighter />
@@ -30,10 +30,10 @@ export default function SplitLayout() {
       <button
         tabIndex={-1} onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? 'Collapse pattern highlighter' : 'Expand pattern highlighter'}
+        aria-label={open ? 'Collapse PDF viewer' : 'Expand PDF viewer'}
         style={{
-          right: open ? 'calc(40% - 10px)' : '8px',
-          transition: 'right 300ms ease-in-out, color 150ms, background-color 150ms',
+          left: open ? 'calc(50% - 10px)' : '8px',
+          transition: 'left 300ms ease-in-out, color 150ms, background-color 150ms',
         }}
         className="fixed top-1/2 -translate-y-1/2 z-50 w-5 h-12 flex items-center justify-center bg-white border border-gray-200 rounded-lg text-gray-400 hover:text-gray-800 hover:bg-gray-50 shadow-[0_2px_8px_rgb(0,0,0,0.06)]"
       >
@@ -48,9 +48,9 @@ export default function SplitLayout() {
           strokeLinejoin="round"
         >
           {open ? (
-            <polyline points="3,1 7,5 3,9" />
-          ) : (
             <polyline points="7,1 3,5 7,9" />
+          ) : (
+            <polyline points="3,1 7,5 3,9" />
           )}
         </svg>
       </button>

@@ -87,6 +87,10 @@ export default function PatternHighlighter() {
   const timerFinishedRef = useRef(false);
 
   const imageRef = useRef<HTMLImageElement>(null);
+  const highlightImgRef = useRef<HTMLImageElement>(null);
+  const imgContainerRef = useRef<HTMLDivElement>(null);
+  const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
+  const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 });
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const pugDrag = useDraggable('ph-pug-pos', (el) => ({ x: 24, y: window.innerHeight - el.offsetHeight - 24 }));
@@ -98,6 +102,7 @@ export default function PatternHighlighter() {
     setCompletedCrop(null);
     setIsHighlightMode(false);
     setCurrentRow(1); // 換新圖時，行數重置回 1
+    setNaturalSize({ w: 0, h: 0 });
 
     const reader = new FileReader();
     reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
@@ -248,6 +253,17 @@ export default function PatternHighlighter() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isHighlightMode, totalRows]);
 
+  // Observe container size to scale image up/down to fill it
+  useEffect(() => {
+    const el = imgContainerRef.current;
+    if (!el) return;
+    const update = () => setContainerSize({ w: el.clientWidth, h: el.clientHeight });
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [imgSrc]);
+
   // ── Persistence ──────────────────────────────────────────────────────────
 
   // Load all persisted state on mount (defined before save effects so it runs first)
@@ -287,6 +303,16 @@ export default function PatternHighlighter() {
 
   // ─────────────────────────────────────────────────────────────────────────
 
+  // Scale image to fill the container while preserving aspect ratio
+  const scaledImgSize = (() => {
+    if (!naturalSize.w || !naturalSize.h || !containerSize.w || !containerSize.h) return null;
+    const pad = 24; // p-3 = 12px on each side
+    const availW = Math.max(1, containerSize.w - pad);
+    const availH = Math.max(1, containerSize.h - pad);
+    const scale = Math.min(availW / naturalSize.w, availH / naturalSize.h);
+    return { w: Math.round(naturalSize.w * scale), h: Math.round(naturalSize.h * scale) };
+  })();
+
   const getHighlightStyle = () => {
     if (!completedCrop) return {};
     const safeTotalRows = Number(totalRows) || 1;
@@ -299,6 +325,36 @@ export default function PatternHighlighter() {
       left: `${completedCrop.x}%`,
       width: `${completedCrop.width}%`,
       height: `${rowHeightPercent}%`,
+    };
+  };
+
+  const getZoomTransform = (): React.CSSProperties => {
+    if (!completedCrop || !scaledImgSize) return {};
+
+    const safeTotalRows = Number(totalRows) || 1;
+    const rowHeightPercent = completedCrop.height / safeTotalRows;
+    const rowIndexFromTop = safeTotalRows - currentRow;
+    const highlightTopPercent = completedCrop.y + rowIndexFromTop * rowHeightPercent;
+
+    const contextRows = 0.3;
+    const zoomTopPercent = Math.max(completedCrop.y, highlightTopPercent - contextRows * rowHeightPercent);
+    const zoomBottomPercent = Math.min(completedCrop.y + completedCrop.height, highlightTopPercent + (1 + contextRows) * rowHeightPercent);
+    const zoomHeightPercent = zoomBottomPercent - zoomTopPercent;
+
+    const { w: imgW, h: imgH } = scaledImgSize;
+    const zx = (completedCrop.x / 100) * imgW;
+    const zy = (zoomTopPercent / 100) * imgH;
+    const zw = (completedCrop.width / 100) * imgW;
+    const zh = (zoomHeightPercent / 100) * imgH;
+
+    const scale = Math.min(imgW / zw, imgH / zh);
+    const cx = (imgW - zw * scale) / 2;
+    const cy = (imgH - zh * scale) / 2;
+
+    return {
+      transform: `translate(${cx}px, ${cy}px) scale(${scale}) translate(${-zx}px, ${-zy}px)`,
+      transformOrigin: '0 0',
+      transition: 'transform 0.3s ease-out',
     };
   };
 
@@ -392,7 +448,7 @@ export default function PatternHighlighter() {
             </div>
 
             {/* 織圖顯示區塊 */}
-            <div className="w-full flex-1 min-h-0 flex justify-center items-center bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden p-3">
+            <div ref={imgContainerRef} className="w-full flex-1 min-h-0 flex justify-center items-center bg-gray-50 border border-gray-100 rounded-2xl overflow-hidden p-3">
 
               {!isHighlightMode ? (
                 // 【關鍵 1】給 ReactCrop 加上 !inline-flex 確保它的外框行為跟普通的 div 一致
@@ -406,26 +462,31 @@ export default function PatternHighlighter() {
                     ref={imageRef}
                     src={imgSrc}
                     alt="Pattern"
-                    // 【關鍵 2】用 inline style 強制綁定高度，加上 block 消滅所有預設縫隙
-                    style={{ maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
-                    className="block max-w-full object-contain"
+                    style={scaledImgSize ? { width: scaledImgSize.w, height: scaledImgSize.h } : { maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
+                    className="block"
+                    onLoad={(e) => setNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
                   />
                 </ReactCrop>
               ) : (
-                // 【關鍵 3】這裡的外層容器也必須是 inline-flex
-                <div className="relative inline-flex">
-                  <img
-                    src={imgSrc}
-                    alt="Pattern"
-                    style={{ maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
-                    className="block max-w-full object-contain"
-                  />
+                // Zoom viewport: overflow-hidden clips to original image bounds
+                <div className="overflow-hidden inline-flex">
+                  {/* Inner container gets the zoom transform */}
+                  <div className="relative inline-flex" style={getZoomTransform()}>
+                    <img
+                      ref={highlightImgRef}
+                      src={imgSrc}
+                      alt="Pattern"
+                      style={scaledImgSize ? { width: scaledImgSize.w, height: scaledImgSize.h } : { maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
+                      className="block"
+                      onLoad={(e) => setNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+                    />
 
-                  {/* 高亮遮罩 */}
-                  <div
-                    className="absolute bg-yellow-300/40 border-y-[3px] border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all duration-300 ease-out pointer-events-none mix-blend-multiply"
-                    style={getHighlightStyle()}
-                  />
+                    {/* 高亮遮罩 */}
+                    <div
+                      className="absolute bg-yellow-300/40 border-y-[3px] border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all duration-300 ease-out pointer-events-none mix-blend-multiply"
+                      style={getHighlightStyle()}
+                    />
+                  </div>
                 </div>
               )}
 
