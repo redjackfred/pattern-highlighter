@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pattern Highlighter
 
-## Getting Started
+A browser-based tool for knitters to follow patterns row by row. Upload your pattern image, draw a crop selection over the stitch grid, and navigate row by row with keyboard shortcuts — no app install required.
 
-First, run the development server:
+## Features
+
+- **Row highlighter** — crops a stitch grid from a pattern image and overlays a yellow highlight on the current row; numbering is bottom-up (row 1 = bottom)
+- **PDF viewer** — load your pattern PDF side-by-side for easy reference
+- **Pug counter** — left/right arrow keys increment or decrement a stitch counter
+- **Pomodoro timer** — draggable countdown timer with audio notification on completion
+- **Keyboard-driven** — ↑/↓ moves between rows, ←/→ adjusts the stitch counter, Space starts/pauses the timer, Enter collapses panels
+- **Paste to load** — paste a screenshot directly (`Ctrl+V`) to load a pattern image without a file dialog
+- **Persistent state** — pattern image, crop selection, row position, and PDF are all saved across sessions via `localStorage` + IndexedDB
+
+## Tech stack
+
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19 + TypeScript |
+| Styling | Tailwind CSS v4 |
+| Crop | `react-image-crop` |
+| Storage | `localStorage` + IndexedDB |
+| Package manager | Bun |
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+bun install
+bun dev       # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Usage
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Click **Choose Image** or paste a screenshot (`Ctrl+V`) to load your pattern.
+2. Drag a crop selection over the stitch rows you want to track.
+3. Enter the total number of rows in your selected area and click **Start Highlighting**.
+4. Press **↑ / ↓** to move to the next or previous row.
+5. Optionally load a PDF with your full pattern instructions using the PDF panel on the right.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Build
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+bun build     # production build
+bun lint      # ESLint
+```
