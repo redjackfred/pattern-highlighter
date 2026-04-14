@@ -76,6 +76,8 @@ export default function ChatBot() {
       }
     }
     loadPdf()
+    window.addEventListener('pdf-uploaded', loadPdf)
+    return () => window.removeEventListener('pdf-uploaded', loadPdf)
   }, [])
 
   // Persist open state

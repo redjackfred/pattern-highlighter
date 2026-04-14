@@ -10,7 +10,8 @@ export default function PdfViewer() {
     if (pdfUrl) URL.revokeObjectURL(pdfUrl);
     setPdfUrl(URL.createObjectURL(file));
     const buffer = await file.arrayBuffer();
-    idbSet('pdf-file', buffer);
+    await idbSet('pdf-file', buffer);
+    window.dispatchEvent(new CustomEvent('pdf-uploaded'));
   };
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
