@@ -9,7 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^3.0.52",
+    "@ai-sdk/react": "^3.0.161",
+    "ai": "^6.0.159",
     "next": "16.1.6",
+    "pdfjs-dist": "^5.6.205",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-image-crop": "^11.0.10"

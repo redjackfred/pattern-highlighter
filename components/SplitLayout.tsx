@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import PdfViewer from './PdfViewer';
 import PatternHighlighter from './PatternHighlighter';
+import ChatBot from './ChatBot';
 
 type ViewMode = 'default' | 'pdf-collapsed' | 'pattern-collapsed';
 
@@ -88,6 +89,7 @@ export default function SplitLayout() {
         )}
       </div>
 
+      <ChatBot />
     </div>
   );
 }
