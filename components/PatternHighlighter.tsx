@@ -90,6 +90,7 @@ export default function PatternHighlighter() {
   const imageRef = useRef<HTMLImageElement>(null);
   const highlightImgRef = useRef<HTMLImageElement>(null);
   const imgContainerRef = useRef<HTMLDivElement>(null);
+  const zoomScrollRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 });
   const [naturalSize, setNaturalSize] = useState({ w: 0, h: 0 });
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -314,6 +315,17 @@ export default function PatternHighlighter() {
     return { w: Math.round(naturalSize.w * scale), h: Math.round(naturalSize.h * scale) };
   })();
 
+  // Auto-scroll zoom viewport to horizontally center the crop on each row change
+  // (placed after scaledImgSize declaration so it can reference it in deps)
+  useEffect(() => {
+    if (!isHighlightMode || !zoomScrollRef.current) return;
+    const geom = getZoomGeom();
+    if (!geom) return;
+    const el = zoomScrollRef.current;
+    el.scrollLeft = Math.max(0, (geom.contentW - el.clientWidth) / 2);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isHighlightMode, currentRow, completedCrop, scaledImgSize, totalRows, containerSize]);
+
   const getHighlightStyle = () => {
     if (!completedCrop) return {};
     const safeTotalRows = Number(totalRows) || 1;
@@ -329,8 +341,8 @@ export default function PatternHighlighter() {
     };
   };
 
-  const getZoomTransform = (): React.CSSProperties => {
-    if (!completedCrop || !scaledImgSize) return {};
+  const getZoomGeom = () => {
+    if (!completedCrop || !scaledImgSize || !containerSize.w || !containerSize.h) return null;
 
     const safeTotalRows = Number(totalRows) || 1;
     const rowHeightPercent = completedCrop.height / safeTotalRows;
@@ -343,20 +355,29 @@ export default function PatternHighlighter() {
     const zoomHeightPercent = zoomBottomPercent - zoomTopPercent;
 
     const { w: imgW, h: imgH } = scaledImgSize;
+    const availH = containerSize.h - 24;
+    const availW = containerSize.w - 24;
+
     const zx = (completedCrop.x / 100) * imgW;
     const zy = (zoomTopPercent / 100) * imgH;
     const zw = (completedCrop.width / 100) * imgW;
     const zh = (zoomHeightPercent / 100) * imgH;
 
-    const scale = Math.min(imgW / zw, imgH / zh) * 1.8;
-    const cx = (imgW - zw * scale) / 2;
-    const cy = (imgH - zh * scale) / 2;
+    // Max zoom that fills height; capped so width never exceeds 3× container (avoid extreme scroll)
+    const scale = Math.min(availH / zh, (availW / zw) * 3);
 
-    return {
-      transform: `translate(${cx}px, ${cy}px) scale(${scale}) translate(${-zx}px, ${-zy}px)`,
-      transformOrigin: '0 0',
-      transition: 'transform 0.3s ease-out',
-    };
+    const contentW = Math.round(zw * scale);
+    const contentH = Math.round(zh * scale);
+    const imgLeft = -Math.round(zx * scale);
+    const imgTop = -Math.round(zy * scale);
+    const imgScaledW = Math.round(imgW * scale);
+    const imgScaledH = Math.round(imgH * scale);
+
+    // Highlight row position within the scrollable content
+    const rowTopInContent = Math.round(((highlightTopPercent - zoomTopPercent) / zoomHeightPercent) * contentH);
+    const rowHeightInContent = Math.round((rowHeightPercent / zoomHeightPercent) * contentH);
+
+    return { contentW, contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent };
   };
 
   return (
@@ -367,7 +388,7 @@ export default function PatternHighlighter() {
         <p className="text-gray-500 text-sm">專注於你的每一段編織</p>
       </div>
 
-      <div className="w-full max-w-6xl flex-1 min-h-0 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 overflow-hidden flex flex-col">
+      <div className="w-full flex-1 min-h-0 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 overflow-hidden flex flex-col">
 
         {/* 狀態 1：還沒上傳圖片 */}
         {!imgSrc && (
@@ -468,28 +489,37 @@ export default function PatternHighlighter() {
                     onLoad={(e) => setNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
                   />
                 </ReactCrop>
-              ) : (
-                // Zoom viewport: overflow-hidden clips to original image bounds
-                <div className="overflow-hidden inline-flex">
-                  {/* Inner container gets the zoom transform */}
-                  <div className="relative inline-flex" style={getZoomTransform()}>
-                    <img
-                      ref={highlightImgRef}
-                      src={imgSrc}
-                      alt="Pattern"
-                      style={scaledImgSize ? { width: scaledImgSize.w, height: scaledImgSize.h } : { maxHeight: 'calc(100vh - 260px)', width: 'auto' }}
-                      className="block"
-                      onLoad={(e) => setNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
-                    />
-
-                    {/* 高亮遮罩 */}
+              ) : (() => {
+                const geom = getZoomGeom();
+                if (!geom) return null;
+                const { contentW, contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent } = geom;
+                return (
+                  // Scrollable zoom: renders crop at actual large dimensions so overflow-x-auto works
+                  <div
+                    ref={zoomScrollRef}
+                    className="w-full h-full overflow-x-auto overflow-y-hidden flex items-center"
+                    style={{ scrollbarWidth: 'none' }}
+                  >
                     <div
-                      className="absolute bg-yellow-300/40 border-y-[3px] border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.3)] transition-all duration-300 ease-out pointer-events-none mix-blend-multiply"
-                      style={getHighlightStyle()}
-                    />
+                      className="relative flex-shrink-0"
+                      style={{ width: contentW, height: contentH }}
+                    >
+                      <img
+                        ref={highlightImgRef}
+                        src={imgSrc}
+                        alt="Pattern"
+                        style={{ position: 'absolute', width: imgScaledW, height: imgScaledH, left: imgLeft, top: imgTop }}
+                        onLoad={(e) => setNaturalSize({ w: e.currentTarget.naturalWidth, h: e.currentTarget.naturalHeight })}
+                      />
+                      {/* 高亮遮罩 */}
+                      <div
+                        className="absolute left-0 right-0 bg-yellow-300/40 border-y-[3px] border-yellow-400/80 shadow-[0_0_20px_rgba(250,204,21,0.3)] pointer-events-none mix-blend-multiply"
+                        style={{ top: rowTopInContent, height: rowHeightInContent, transition: 'top 0.3s ease-out, height 0.3s ease-out' }}
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
             </div>
           </div>
