@@ -355,7 +355,6 @@ const getHighlightStyle = () => {
     // Scale so crop width exactly fills the available container width — never clips left/right
     const scale = availW / zw;
 
-    const contentW = availW; // = zw * scale, exactly fills container
     const contentH = Math.round(zh * scale);
     const imgLeft = -Math.round(zx * scale);
     const imgTop = -Math.round(zy * scale);
@@ -366,7 +365,7 @@ const getHighlightStyle = () => {
     const rowTopInContent = Math.round(((highlightTopPercent - zoomTopPercent) / zoomHeightPercent) * contentH);
     const rowHeightInContent = Math.round((rowHeightPercent / zoomHeightPercent) * contentH);
 
-    return { contentW, contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent };
+    return { contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent };
   };
 
   return (
@@ -481,16 +480,16 @@ const getHighlightStyle = () => {
               ) : (() => {
                 const geom = getZoomGeom();
                 if (!geom) return null;
-                const { contentW, contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent } = geom;
+                const { contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent } = geom;
                 return (
                   // Zoom viewport: crop fills full width, no horizontal clipping
                   <div
                     ref={zoomScrollRef}
-                    className="w-full h-full overflow-hidden flex items-center justify-center"
+                    className="w-full h-full overflow-hidden flex items-center"
                   >
                     <div
-                      className="relative flex-shrink-0"
-                      style={{ width: contentW, height: contentH }}
+                      className="relative w-full"
+                      style={{ height: contentH }}
                     >
                       <img
                         ref={highlightImgRef}
