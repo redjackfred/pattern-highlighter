@@ -315,18 +315,7 @@ export default function PatternHighlighter() {
     return { w: Math.round(naturalSize.w * scale), h: Math.round(naturalSize.h * scale) };
   })();
 
-  // Auto-scroll zoom viewport to horizontally center the crop on each row change
-  // (placed after scaledImgSize declaration so it can reference it in deps)
-  useEffect(() => {
-    if (!isHighlightMode || !zoomScrollRef.current) return;
-    const geom = getZoomGeom();
-    if (!geom) return;
-    const el = zoomScrollRef.current;
-    el.scrollLeft = Math.max(0, (geom.contentW - el.clientWidth) / 2);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isHighlightMode, currentRow, completedCrop, scaledImgSize, totalRows, containerSize]);
-
-  const getHighlightStyle = () => {
+const getHighlightStyle = () => {
     if (!completedCrop) return {};
     const safeTotalRows = Number(totalRows) || 1;
     const rowIndexFromTop = safeTotalRows - currentRow;
@@ -363,17 +352,17 @@ export default function PatternHighlighter() {
     const zw = (completedCrop.width / 100) * imgW;
     const zh = (zoomHeightPercent / 100) * imgH;
 
-    // Max zoom that fills height; capped so width never exceeds 3× container (avoid extreme scroll)
-    const scale = Math.min(availH / zh, (availW / zw) * 3);
+    // Scale so crop width exactly fills the available container width — never clips left/right
+    const scale = availW / zw;
 
-    const contentW = Math.round(zw * scale);
+    const contentW = availW; // = zw * scale, exactly fills container
     const contentH = Math.round(zh * scale);
     const imgLeft = -Math.round(zx * scale);
     const imgTop = -Math.round(zy * scale);
     const imgScaledW = Math.round(imgW * scale);
     const imgScaledH = Math.round(imgH * scale);
 
-    // Highlight row position within the scrollable content
+    // Highlight row position within the content
     const rowTopInContent = Math.round(((highlightTopPercent - zoomTopPercent) / zoomHeightPercent) * contentH);
     const rowHeightInContent = Math.round((rowHeightPercent / zoomHeightPercent) * contentH);
 
@@ -494,11 +483,10 @@ export default function PatternHighlighter() {
                 if (!geom) return null;
                 const { contentW, contentH, imgLeft, imgTop, imgScaledW, imgScaledH, rowTopInContent, rowHeightInContent } = geom;
                 return (
-                  // Scrollable zoom: renders crop at actual large dimensions so overflow-x-auto works
+                  // Zoom viewport: crop fills full width, no horizontal clipping
                   <div
                     ref={zoomScrollRef}
-                    className="w-full h-full overflow-x-auto overflow-y-hidden flex items-center"
-                    style={{ scrollbarWidth: 'none' }}
+                    className="w-full h-full overflow-hidden flex items-center justify-center"
                   >
                     <div
                       className="relative flex-shrink-0"
