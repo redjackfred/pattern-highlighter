@@ -337,7 +337,7 @@ export default function PatternHighlighter() {
     const rowIndexFromTop = safeTotalRows - currentRow;
     const highlightTopPercent = completedCrop.y + rowIndexFromTop * rowHeightPercent;
 
-    const contextRows = 0.3;
+    const contextRows = 0.1;
     const zoomTopPercent = Math.max(completedCrop.y, highlightTopPercent - contextRows * rowHeightPercent);
     const zoomBottomPercent = Math.min(completedCrop.y + completedCrop.height, highlightTopPercent + (1 + contextRows) * rowHeightPercent);
     const zoomHeightPercent = zoomBottomPercent - zoomTopPercent;
@@ -348,7 +348,7 @@ export default function PatternHighlighter() {
     const zw = (completedCrop.width / 100) * imgW;
     const zh = (zoomHeightPercent / 100) * imgH;
 
-    const scale = Math.min(imgW / zw, imgH / zh);
+    const scale = Math.min(imgW / zw, imgH / zh) * 1.8;
     const cx = (imgW - zw * scale) / 2;
     const cy = (imgH - zh * scale) / 2;
 
